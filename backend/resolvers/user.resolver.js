@@ -6,7 +6,7 @@ import User from '../models/user.model.js';
 const userResolver = {
     Query: {
         //get authenticate user
-        authUser: async (_,_,context) => {
+        authUser: async (_,context) => {
             try{
                 //graphql passport method
                 const user = await context.getUser();
