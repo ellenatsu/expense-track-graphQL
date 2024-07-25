@@ -4,6 +4,7 @@ import http from 'http';
 import dotenv from 'dotenv';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
+import { ApolloServerPluginLandingPageLocalDefault, ApolloServerPluginLandingPageProductionDefault } from '@apollo/server/plugin/landingPage/default';
 import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
 import passport from "passport";
 import session from "express-session";
@@ -44,6 +45,8 @@ app.use(
 		cookie: {
 			maxAge: 1000 * 60 * 60 * 24 * 7,
 			httpOnly: true, // this option prevents the Cross-Site Scripting (XSS) attacks
+      secure: process.env.NODE_ENV === 'production', // Ensure secure cookies in production
+      sameSite: 'lax'
 		},
 		store: store,
 	})
@@ -53,12 +56,22 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
+// Ensure we wait for our server to start
+await connectDB();
+
+
 // Same ApolloServer initialization as before, plus the drain plugin
 // for our httpServer.
 const server = new ApolloServer({
   typeDefs: mergedTypeDefs,
 	resolvers: mergedResolvers,
-  plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
+  introspection: true, // Enable introspection
+  plugins: [ // Install a landing page plugin based on NODE_ENV
+    process.env.NODE_ENV === 'production'
+      ? ApolloServerPluginLandingPageProductionDefault({footer: false})
+      : ApolloServerPluginLandingPageLocalDefault({ footer: false }),
+    ApolloServerPluginDrainHttpServer({ httpServer })
+    ],
 });
 // Ensure we wait for our server to start
 await server.start();
@@ -66,22 +79,24 @@ await server.start();
 // Set up apollo Express middleware to handle CORS, body parsing,
 // and expressMiddleware function.
 app.use(
-  '/',
-  cors(),
+  '/graphql',
+  cors({
+    origin: "http://localhost:3000", // Allow Apollo Studio
+    credentials: true,
+  }),
   express.json(),
   // expressMiddleware accepts the same arguments:
-  // an Apollo Server instance and optional configuration options
-  //context func: to create a shared context for all GraphQL resolvers. 
-  //This context is passed to every resolver function and 
-  //can be used to share data, perform authentication, or access databases.
+  // an Apollo Server instance and optional configuration options context func: to create a shared context for all GraphQL resolvers. 
+  //This context is passed to every resolver function and can be used to share data, perform authentication, or access databases.
   expressMiddleware(server, {
-    context: async ({ req, res }) => buildContext({ req, res, User }),
-  }),
+		context: async ({ req, res }) => buildContext({ req, res }),
+	}),
 );
 
 // Modified server startup
 await new Promise((resolve) => httpServer.listen({ port: 4000 }, resolve));
 
-//start database
-await connectDB();
-console.log(`🚀 Server ready at http://localhost:4000/`);
+
+
+
+console.log(`🚀 Server ready at http://localhost:4000/graphql`);

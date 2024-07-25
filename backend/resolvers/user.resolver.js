@@ -6,15 +6,17 @@ import User from '../models/user.model.js';
 const userResolver = {
     Query: {
         //get authenticate user
-        authUser: async (_,context) => {
-            try{
-                //graphql passport method
-                const user = await context.getUser();
-                return user;
-            }catch(e){
-                console.error("Error getting authenticated user: ", e);
-                throw new Error(e.message || "internal server error");
-            }
+        authUser:  (parent, args,context) => {
+            // try{
+            //     //graphql passport method
+            //     const user = await context.getUser();
+            //     console.log("in backend resolver Authenticated user: ", user);
+            //     return user;
+            // }catch(e){
+            //     console.error("Error getting authenticated user: ", e);
+            //     throw new Error(e.message || "internal server error");
+            // }
+            return  context.getUser();
         },
         //fetch single user
         user: async (_, {userId}) => {
@@ -80,8 +82,23 @@ const userResolver = {
                 //auth
                 const {user} = await context.authenticate("graphql-local", {username, password});
                 
-                await context.login(user);
-                return user;
+                await new Promise((resolve, reject) => {
+                    context.login(user, (err) => {
+                      if (err) {
+                        console.error("Login error:", err);
+                        reject(new Error("Login failed"));
+                      } else {
+                        console.log("Login successful");
+                        resolve();
+                      }
+                    });
+                  });
+                  console.log('--- login response ---');
+                  console.log(`isAuthenticated: ${context.isAuthenticated()}`);
+                  console.log(`isUnauthenticated: ${context.isUnauthenticated()}`);
+                  console.log(`getUser: ${context.getUser()}`);
+            
+                  return  user ;
 
             }catch(e){
                 console.error("Error logging in user: ", e);
@@ -93,12 +110,12 @@ const userResolver = {
             try{
                 await context.logout();
                 //clear the cookie
-                req.session.destory((err)=>{
+                context.req.session.destroy((err)=>{
                     if(err){
                         console.error("Error logging out user: ", err);
                         throw new Error(err.message || "internal server error");}
                 })
-                res.clearCookie("connect.sid");
+                context.res.clearCookie("connect.sid");
 
                 return {
                     message: "Logged out successfully"

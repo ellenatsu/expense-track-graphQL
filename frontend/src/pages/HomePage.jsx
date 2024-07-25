@@ -1,14 +1,35 @@
+import { useMutation } from "@apollo/client";
 import { Doughnut } from "react-chartjs-2";
+import { MdLogout } from "react-icons/md";
+import toast from "react-hot-toast";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 
 import Cards from "../components/Cards";
 import TransactionForm from "../components/TransactionForm";
-
-import { MdLogout } from "react-icons/md";
+import { LOGOUT } from "../graphql/mutations/user.mutation";
+import { GET_AUTHENTICATED_USER } from "../graphql/queries/user.query";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 const HomePage = () => {
+
+	//for logout
+	const [logout, {loading}] = useMutation(LOGOUT,{
+		refetchQueries: [GET_AUTHENTICATED_USER],
+	  });
+	
+	const handleLogout = async () => {
+		try{
+			await logout();
+			//TODO:clear the apollo client cache
+
+			toast.success("logged out successfully");
+		}catch(error){
+			console.error("Error logging out user: ", error);
+			toast.error(error.message || "Internal server error");
+		}
+	};
+
 	const chartData = {
 		labels: ["Saving", "Expense", "Investment"],
 		datasets: [
@@ -25,11 +46,6 @@ const HomePage = () => {
 		],
 	};
 
-	const handleLogout = () => {
-		console.log("Logging out...");
-	};
-
-	const loading = false;
 
 	return (
 		<>

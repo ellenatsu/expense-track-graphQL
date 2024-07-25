@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useMutation } from "@apollo/client";
+import toast from "react-hot-toast";
+
 import InputField from "../components/InputField";
 import RadioButton from "../components/RadioButton";
+import { SIGN_UP } from "../graphql/mutations/user.mutation";
 
 const SignUpPage = () => {
 	const [signUpData, setSignUpData] = useState({
@@ -10,6 +14,29 @@ const SignUpPage = () => {
 		password: "",
 		gender: "",
 	});
+	//apollo client mutation
+	const [signUp, {loading, error}] = useMutation(SIGN_UP, {
+		refetchQueries: ["GetAuthenticatedUser"],
+	});
+
+	const handleSubmit = async (e) => {
+		e.preventDefault();
+		try{
+			const data = await signUp({
+				variables: {
+					input: signUpData,
+				}
+			})
+			console.log("new user: ", data)
+	
+			toast.success("User signed up successfully");
+
+		} catch(error){
+			console.error("Error signing up user: ", error);
+			toast.error(error.message || "Internal server error");
+		}
+	};
+    
 
 	const handleChange = (e) => {
 		const { name, value, type } = e.target;
@@ -27,10 +54,7 @@ const SignUpPage = () => {
 		}
 	};
 
-	const handleSubmit = async (e) => {
-		e.preventDefault();
-		console.log(signUpData);
-	};
+
 
 	return (
 		<div className='h-screen flex justify-center items-center'>
