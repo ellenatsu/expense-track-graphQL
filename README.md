@@ -1,4 +1,4 @@
-#GraphQL, Apollo basic project
+#GraphQL, Apollo basic project#
 
 1. FrontEnd: Aceternity UI lib, React, Apollo client.
 
