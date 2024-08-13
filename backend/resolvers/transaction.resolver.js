@@ -1,9 +1,9 @@
-import { transactions } from "../dummyData/data.js";
+
 import Transaction from "../models/transaction.model.js";
 
 const transactionResolver = {
     Query: {
-        transactions: async (_,context) => {
+        transactions: async (parent, args,context) => {
             try{
                 //get current user
                 if(!context.getUser()){
